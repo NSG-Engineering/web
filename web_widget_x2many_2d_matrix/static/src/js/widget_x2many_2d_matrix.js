@@ -42,7 +42,9 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
             this.x_axis_clickable = this.parse_boolean(node.x_axis_clickable || "1");
             this.y_axis_clickable = this.parse_boolean(node.y_axis_clickable || "1");
             this.field_value = node.field_value || this.field_value;
-            // TODO: is this really needed? Holger?
+            this.fields_att = {};
+            // Here we attach extra params that user want to attach
+            // to each single cell.
             for (var property in node) {
                 if (property.startsWith("field_att_")) {
                     this.fields_att[property.substring(10)] = node[property];
@@ -59,17 +61,13 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
                     )
                 );
             }
-            this.show_row_totals = this.parse_boolean(
-                node.show_row_totals ||
+            this.show_row_totals = Boolean(
+                this.parse_boolean(node.show_row_totals || "1") &&
                     this.is_aggregatable(field_defs[this.field_value])
-                    ? "1"
-                    : ""
             );
-            this.show_column_totals = this.parse_boolean(
-                node.show_column_totals ||
+            this.show_column_totals = Boolean(
+                this.parse_boolean(node.show_column_totals || "1") &&
                     this.is_aggregatable(field_defs[this.field_value])
-                    ? "1"
-                    : ""
             );
         },
 
@@ -85,14 +83,20 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
             this.by_y_axis = {};
             this.x_axis = [];
             this.y_axis = [];
+            this.x_axis_labels = {};
             _.each(
                 records,
                 function (record) {
                     var x = record.data[this.field_x_axis],
+                    x_label = record.data[this.field_label_x_axis],
                         y = record.data[this.field_y_axis];
                     if (x.type === "record") {
                         // We have a related record
                         x = x.data.display_name;
+                    }
+                    if (x_label.type === "record") {
+                        // We have a related record
+                        x_label = x_label.data.display_name;
                     }
                     if (y.type === "record") {
                         // We have a related record
@@ -105,6 +109,7 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
                     }
                     if (this.x_axis.indexOf(x) === -1) {
                         this.x_axis.push(x);
+                        this.x_axis_labels[x] = x_label;
                     }
                 }.bind(this)
             );
@@ -127,11 +132,15 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
                 field_value: this.field_value,
                 field_x_axis: this.field_x_axis,
                 field_y_axis: this.field_y_axis,
+                field_label_x_axis: this.field_label_x_axis,
+                field_label_y_axis: this.field_label_y_axis,
                 columns: this.columns,
                 rows: this.rows,
                 show_row_totals: this.show_row_totals,
                 show_column_totals: this.show_column_totals,
+                fields_att: this.fields_att,
             };
+            console.log(this.matrix_data);
         },
 
         /**
@@ -147,6 +156,7 @@ odoo.define("web_widget_x2many_2d_matrix.widget", function (require) {
                 attrs: {
                     name: this.field_x_axis,
                     string: x,
+                    label: this.x_axis_labels[x],
                 },
             };
         },
